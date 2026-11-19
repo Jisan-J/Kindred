@@ -1,5 +1,5 @@
 import express from 'express'
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import 'dotenv/config'
 import cors from 'cors';
 const app = express();
@@ -18,7 +18,6 @@ export async function connectToMongoDB() {
     console.dir(err);
   }
 }
-
 connectToMongoDB();
 
 const PORT = process.env.PORT || 8000;
@@ -27,19 +26,22 @@ app.listen(PORT, () => {
 
 })
 
-
+/* database and collection address */
 const database = client.db("event_management");
 const events = database.collection("events");
 
+/* show the all event object from database to server and  make api  */
 app.get('/all-events', async(req, res) => {
     const cursor = events.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
 })
 
+
+/* Event inserting part */
 app.post('/all-events', async(req, res)=>{
   const data = req.body;
-  
+  /* separating the date to 3 property */
     const [year, month, day] = data.date.split("-");
 
   const event = {
@@ -55,4 +57,15 @@ app.post('/all-events', async(req, res)=>{
   const result = await events.insertOne(event);
   res.send(result)
   
+})
+
+/* existing Event details Updated part */
+app.patch('/all-events', async(req, res)=>{
+  /* here is separated id becuse already have _id that's an uniqe number */
+  const {id, ...updatedData} = req.body
+  const result = await events.updateOne(
+    {_id: new ObjectId(id)},
+    {$set:updatedData},
+  )
+  res.json(result)
 })
