@@ -28,21 +28,28 @@ app.listen(PORT, () => {
 
 /* database and collection address */
 const database = client.db("event_management");
-const events = database.collection("events");
+const eventsCollection = database.collection("events");
 
 /* show the all event object from database to server and  make api  */
-app.get('/all-events', async(req, res) => {
-    const cursor = events.find({});
+app.get('/all-events', async (req, res) => {
+  const cursor = eventsCollection.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
 })
 
-
+app.get("/recent-events", async (req, res) => {
+  const events = await eventsCollection
+    .find({ date: { $gte: new Date() } })
+    .sort({ date: 1 })
+    .limit(6)
+    .toArray();
+  res.json(events);
+});
 /* Event inserting part */
-app.post('/all-events', async(req, res)=>{
+app.post('/all-events', async (req, res) => {
   const data = req.body;
   /* separating the date to 3 property */
-    const [year, month, day] = data.date.split("-");
+  const [year, month, day] = data.date.split("-");
 
   const event = {
     ...data,
@@ -54,18 +61,69 @@ app.post('/all-events', async(req, res)=>{
     people: Number(data.people),
   };
 
-  const result = await events.insertOne(event);
+  const result = await eventsCollection.insertOne(event);
   res.send(result)
-  
+
 })
 
 /* existing Event details Updated part */
-app.patch('/all-events', async(req, res)=>{
-  /* here is separated id becuse already have _id that's an uniqe number */
-  const {id, ...updatedData} = req.body
-  const result = await events.updateOne(
-    {_id: new ObjectId(id)},
-    {$set:updatedData},
+app.patch('/all-events', async (req, res) => {
+  /* here is separated id and others data becuse already have _id that's an uniqe number */
+  const { id, ...updatedData } = req.body
+  const result = await eventsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updatedData },
   )
   res.json(result)
+})
+
+/* card delete */
+app.delete('/all-events', async (req, res) => {
+
+  const { id } = req.body
+  const result = await eventsCollection.deleteOne(
+    { _id: new ObjectId(id) },
+
+  )
+  res.json(result)
+
+})
+
+
+
+const joinedPeopleCollection = database.collection("joined_people");
+
+app.get('/joined_people', async (req, res) => {
+  const cursor = joinedPeopleCollection.find({});
+  const allValues = await cursor.toArray();
+  res.send(allValues)
+})
+
+app.post('/joined_people', async (req, res) => {
+  const joinedData = req.body;
+
+  const alreadyJoined = await joinedPeopleCollection.findOne({
+    email: joinedData.email,
+    eventId: joinedData.eventId,
+  });
+
+  if (alreadyJoined) {
+    return res.send({ message: "Already joined this event" });
+  }
+
+  const result = await joinedPeopleCollection.insertOne(joinedData);
+  res.send(result)
+
+})
+
+
+app.delete('/joined_people', async (req, res) => {
+
+  const { id } = req.body
+  const result = await joinedPeopleCollection.deleteOne(
+    { _id: new ObjectId(id) },
+
+  )
+  res.json(result)
+
 })
