@@ -30,6 +30,22 @@ app.listen(PORT, () => {
 const database = client.db("event_management");
 const eventsCollection = database.collection("events");
 
+app.get('/all-events/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid event ID" });
+  }
+
+  const event = await eventsCollection.findOne({ _id: new ObjectId(id) });
+
+  if (!event) {
+    return res.status(404).json({ message: "Event not found" });
+  }
+
+  res.json(event);
+});
+
 /* show the all event object from database to server and  make api  */
 app.get('/all-events', async (req, res) => {
   const cursor = eventsCollection.find({});
@@ -93,7 +109,7 @@ app.delete('/all-events', async (req, res) => {
 
 const joinedPeopleCollection = database.collection("joined_people");
 
-app.get('/joined_people', async (req, res) => {
+app.get('/joined_people/', async (req, res) => {
   const cursor = joinedPeopleCollection.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
