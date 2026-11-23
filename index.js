@@ -106,20 +106,31 @@ app.delete('/all-events', async (req, res) => {
 })
 
 
-
+/* dynamic joined_people id add kora lagbe */
 const joinedPeopleCollection = database.collection("joined_people");
+app.get('/joined_people/:id', async (req, res) => {
+    const { id } = req.params;
 
-app.get('/joined_people/', async (req, res) => {
+    const result = await joinedPeopleCollection.findOne({
+        _id: new ObjectId(id)
+    });
+
+    res.send(result);
+});
+/* show the all event */
+app.get('/joined_people', async (req, res) => {
   const cursor = joinedPeopleCollection.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
 })
 
+
+/* joinig data insert form the all event */
 app.post('/joined_people', async (req, res) => {
   const joinedData = req.body;
 
   const alreadyJoined = await joinedPeopleCollection.findOne({
-    email: joinedData.email,
+    joinerEmail: joinedData.joinerEmail,
     eventId: joinedData.eventId,
   });
 
@@ -127,10 +138,12 @@ app.post('/joined_people', async (req, res) => {
     return res.send({ message: "Already joined this event" });
   }
 
-  const result = await joinedPeopleCollection.insertOne(joinedData);
-  res.send(result)
+  const { _id, ...data } = joinedData;
 
-})
+  const result = await joinedPeopleCollection.insertOne(data);
+
+  res.send(result);
+});
 
 
 app.delete('/joined_people', async (req, res) => {
