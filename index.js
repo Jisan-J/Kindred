@@ -2,6 +2,7 @@ import express from 'express'
 import { MongoClient, ObjectId } from 'mongodb';
 import 'dotenv/config'
 import cors from 'cors';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 const app = express();
 app.use(cors());
 app.use(express.json())
@@ -20,6 +21,31 @@ export async function connectToMongoDB() {
 }
 connectToMongoDB();
 
+const verifyApi = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+
+  const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'))
+  const { payload } = await jwtVerify(token, JWKS)
+
+  console.log(payload);
+  try {
+    const { payload } = await jwtVerify(token, JWKS)
+    next();
+
+  } catch (error) {
+    return res.status(500).send({ msg: "server error" });
+
+  }
+
+}
+
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`server is running ${PORT}`);
@@ -30,7 +56,7 @@ app.listen(PORT, () => {
 const database = client.db("event_management");
 const eventsCollection = database.collection("events");
 
-app.get('/all-events/:id', async (req, res) => {
+app.get('/all-events/:id', verifyApi, async (req, res) => {
   const { id } = req.params;
 
   if (!ObjectId.isValid(id)) {
@@ -62,7 +88,7 @@ app.get("/recent-events", async (req, res) => {
   res.json(events);
 });
 /* Event inserting part */
-app.post('/all-events', async (req, res) => {
+app.post('/all-events', verifyApi, async (req, res) => {
   const data = req.body;
   /* separating the date to 3 property */
   const [year, month, day] = data.date.split("-");
@@ -83,7 +109,7 @@ app.post('/all-events', async (req, res) => {
 })
 
 /* existing Event details Updated part */
-app.patch('/all-events', async (req, res) => {
+app.patch('/all-events',verifyApi, async (req, res) => {
   /* here is separated id and others data becuse already have _id that's an uniqe number */
   const { id, ...updatedData } = req.body
   const result = await eventsCollection.updateOne(
@@ -94,7 +120,7 @@ app.patch('/all-events', async (req, res) => {
 })
 
 /* card delete */
-app.delete('/all-events', async (req, res) => {
+app.delete('/all-events', verifyApi, async (req, res) => {
 
   const { id } = req.body
   const result = await eventsCollection.deleteOne(
@@ -108,17 +134,17 @@ app.delete('/all-events', async (req, res) => {
 
 /* dynamic joined_people id add kora lagbe */
 const joinedPeopleCollection = database.collection("joined_people");
-app.get('/joined_people/:id', async (req, res) => {
-    const { id } = req.params;
+app.get('/joined_people/:id', verifyApi, async (req, res) => {
+  const { id } = req.params;
 
-    const result = await joinedPeopleCollection.findOne({
-        _id: new ObjectId(id)
-    });
+  const result = await joinedPeopleCollection.findOne({
+    _id: new ObjectId(id)
+  });
 
-    res.send(result);
+  res.send(result);
 });
 /* show the all event */
-app.get('/joined_people', async (req, res) => {
+app.get('/joined_people',verifyApi, async (req, res) => {
   const cursor = joinedPeopleCollection.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
@@ -126,7 +152,7 @@ app.get('/joined_people', async (req, res) => {
 
 
 /* joinig data insert form the all event */
-app.post('/joined_people', async (req, res) => {
+app.post('/joined_people',verifyApi, async (req, res) => {
   const joinedData = req.body;
 
   const alreadyJoined = await joinedPeopleCollection.findOne({
@@ -146,7 +172,7 @@ app.post('/joined_people', async (req, res) => {
 });
 
 
-app.delete('/joined_people', async (req, res) => {
+app.delete('/joined_people',verifyApi, async (req, res) => {
 
   const { id } = req.body
   const result = await joinedPeopleCollection.deleteOne(
