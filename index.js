@@ -19,7 +19,6 @@ export async function connectToMongoDB() {
     console.dir(err);
   }
 }
-connectToMongoDB();
 
 const verifyApi = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -31,10 +30,7 @@ const verifyApi = async (req, res, next) => {
     return res.status(401).send({ msg: "Unauthorized!" });
   }
 
-  const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'))
-  const { payload } = await jwtVerify(token, JWKS)
-
-  console.log(payload);
+  const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`))
   try {
     const { payload } = await jwtVerify(token, JWKS)
     next();
@@ -46,11 +42,6 @@ const verifyApi = async (req, res, next) => {
 
 }
 
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-  console.log(`server is running ${PORT}`);
-
-})
 
 /* database and collection address */
 const database = client.db("event_management");
@@ -134,9 +125,9 @@ app.delete('/all-events', verifyApi, async (req, res) => {
 
 /* dynamic joined_people id add kora lagbe */
 const joinedPeopleCollection = database.collection("joined_people");
+
 app.get('/joined_people/:id', verifyApi, async (req, res) => {
   const { id } = req.params;
-
   const result = await joinedPeopleCollection.findOne({
     _id: new ObjectId(id)
   });
@@ -182,3 +173,11 @@ app.delete('/joined_people',verifyApi, async (req, res) => {
   res.json(result)
 
 })
+if (process.env.NODE_ENV !== "production") {
+  app.listen(8000, () => {
+    console.log("Server running on port 8000");
+  });
+}
+
+
+export default app
