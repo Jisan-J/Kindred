@@ -47,7 +47,7 @@ const verifyApi = async (req, res, next) => {
 const database = client.db("event_management");
 const eventsCollection = database.collection("events");
 
-app.get('/all-events/:id', verifyApi, async (req, res) => {
+app.get('/all-events/:id', async (req, res) => {
   const { id } = req.params;
 
   if (!ObjectId.isValid(id)) {
@@ -126,7 +126,7 @@ app.delete('/all-events', verifyApi, async (req, res) => {
 /* dynamic joined_people id add kora lagbe */
 const joinedPeopleCollection = database.collection("joined_people");
 
-app.get('/joined_people/:id', verifyApi, async (req, res) => {
+app.get('/joined_people/:id', async (req, res) => {
   const { id } = req.params;
   const result = await joinedPeopleCollection.findOne({
     _id: new ObjectId(id)
@@ -135,7 +135,7 @@ app.get('/joined_people/:id', verifyApi, async (req, res) => {
   res.send(result);
 });
 /* show the all event */
-app.get('/joined_people',verifyApi, async (req, res) => {
+app.get('/joined_people', async (req, res) => {
   const cursor = joinedPeopleCollection.find({});
   const allValues = await cursor.toArray();
   res.send(allValues)
